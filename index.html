@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body {font-family: 'Poppins', sans-serif;margin:0;background:#222;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;}
+    body{font-family:'Poppins',sans-serif;margin:0;background:#222;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;}
     h1,h2,h3{margin:0.3em;text-align:center;}
     input,button{margin:0.5em;padding:0.8em;font-size:1em;border:none;border-radius:10px;width:80%;max-width:300px;}
     button{background:#ff4444;color:white;font-weight:bold;cursor:pointer;}
@@ -38,6 +38,7 @@
     <div id="judgeNotice"></div>
     <div id="hand"></div>
     <div id="table"></div>
+    <div id="winnerDisplay"></div>
     <div id="scores"></div>
   </div>
 
@@ -45,21 +46,21 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = { apiKey:"AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",authDomain:"cards-against-me-652e1.firebaseapp.com",databaseURL:"https://cards-against-me-652e1-default-rtdb.firebaseio.com",projectId:"cards-against-me-652e1",storageBucket:"cards-against-me-652e1.firebasestorage.app",messagingSenderId:"765408741155",appId:"1:765408741155:web:9e31e2bc6b4b79429b6e96"};
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const firebaseConfig={apiKey:"AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",authDomain:"cards-against-me-652e1.firebaseapp.com",databaseURL:"https://cards-against-me-652e1-default-rtdb.firebaseio.com",projectId:"cards-against-me-652e1",storageBucket:"cards-against-me-652e1.firebasestorage.app",messagingSenderId:"765408741155",appId:"1:765408741155:web:9e31e2bc6b4b79429b6e96"};
+    const app=initializeApp(firebaseConfig);
+    const db=getDatabase(app);
 
-    const blackCards = ["Why can't I sleep at night?","What's that smell?","I got 99 problems but ___ ain't one."];
-    const whiteCards = ["A windmill full of corpses.","An endless stream of diarrhea.","Michelle Obama's arms.","German dungeon porn.","White privilege."];
+    const blackCards=["Why can't I sleep at night?","What's that smell?","I got 99 problems but ___ ain't one."];
+    const whiteCards=["A windmill full of corpses.","An endless stream of diarrhea.","Michelle Obama's arms.","German dungeon porn.","White privilege."];
 
-    let playerName="",lobbyCode="",isHost=false,judge="";
+    let playerName="",lobbyCode="",isHost=false,judge="",playerHand=[];
 
     document.getElementById("createBtn").onclick=async()=>{
       playerName=document.getElementById("nameInput").value.trim();
       if(!playerName)return alert("Enter a name.");
       lobbyCode=Math.random().toString(36).substring(2,7).toUpperCase();
       isHost=true;
-      await set(ref(db,`lobbies/${lobbyCode}`),{players:{[playerName]:{score:0}},host:playerName,phase:"lobby"});
+      await set(ref(db,`lobbies/${lobbyCode}`),{players:{[playerName]:{score:0,hand:drawHand()}},host:playerName,phase:"lobby"});
       enterLobby();
     };
 
@@ -67,9 +68,12 @@
       playerName=document.getElementById("nameInput").value.trim();
       lobbyCode=document.getElementById("joinCodeInput").value.trim().toUpperCase();
       if(!playerName||!lobbyCode)return alert("Enter name and code.");
-      await update(ref(db,`lobbies/${lobbyCode}/players`),{[playerName]:{score:0}});
+      await update(ref(db,`lobbies/${lobbyCode}/players`),{[playerName]:{score:0,hand:drawHand()}});
       enterLobby();
     };
+
+    function drawHand(){return Array.from({length:7},()=>whiteCards[Math.floor(Math.random()*whiteCards.length)]);}
+    function drawCard(){return whiteCards[Math.floor(Math.random()*whiteCards.length)];}
 
     function enterLobby(){
       document.getElementById("home").classList.add("hidden");
@@ -78,29 +82,26 @@
       const playerList=document.getElementById("playerList");
       onValue(ref(db,`lobbies/${lobbyCode}/players`),snap=>{
         playerList.innerHTML="";
-        if(snap.exists())Object.keys(snap.val()).forEach(p=>{const li=document.createElement("li");li.innerText=p;playerList.appendChild(li);});
+        if(snap.exists()){
+          const players=Object.keys(snap.val());
+          players.forEach(p=>{const li=document.createElement("li");li.innerText=p;playerList.appendChild(li);});
+          if(isHost){const startBtn=document.getElementById("startGameBtn");if(players.length>=3)startBtn.classList.remove("hidden");else startBtn.classList.add("hidden");startBtn.onclick=startGame;}
+        }
       });
-      if(isHost){const startBtn=document.getElementById("startGameBtn");startBtn.classList.remove("hidden");startBtn.onclick=startGame;}
       listenForPhaseChange();
     }
 
-    function listenForPhaseChange(){
-      onValue(ref(db,`lobbies/${lobbyCode}/phase`),snapshot=>{
-        if(!snapshot.exists())return;
-        const phase=snapshot.val();
-        if(phase==="game")loadGame();
-      });
-    }
+    function listenForPhaseChange(){onValue(ref(db,`lobbies/${lobbyCode}/phase`),snapshot=>{if(snapshot.exists()&&snapshot.val()==="game")loadGame();});}
 
-    async function startGame(){await startRound();}
+    async function startGame(){const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));if(!snap.exists()||Object.keys(snap.val()).length<3)return alert("Need at least 3 players.");await startRound();}
 
     async function startRound(){
-      const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));
-      if(!snap.exists())return;
+      document.getElementById("winnerDisplay").innerHTML="";
+      const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));if(!snap.exists())return;
       const players=Object.keys(snap.val());
       judge=judge?players[(players.indexOf(judge)+1)%players.length]:players[Math.floor(Math.random()*players.length)];
       const blackCard=blackCards[Math.floor(Math.random()*blackCards.length)];
-      await update(ref(db,`lobbies/${lobbyCode}`),{phase:"game",blackCard,judge,plays:{}});
+      await update(ref(db,`lobbies/${lobbyCode}`),{phase:"game",blackCard,judge,plays:{},winner:null});
     }
 
     function loadGame(){
@@ -108,49 +109,74 @@
       document.getElementById("game").classList.remove("hidden");
       onValue(ref(db,`lobbies/${lobbyCode}/blackCard`),snap=>{if(snap.exists())document.getElementById("blackCard").innerText=snap.val();});
       onValue(ref(db,`lobbies/${lobbyCode}/judge`),snap=>{
-        if(snap.exists()){judge=snap.val();document.getElementById("judgeNotice").innerText=judge===playerName?"You are the judge. Pick the winner.":`${judge} is the judge.`;}
+        if(snap.exists()){judge=snap.val();document.getElementById("judgeNotice").innerText=judge===playerName?"You are the judge. Wait for submissions.":`${judge} is the judge.`;}
       });
-      renderHand();listenForPlays();updateScores();
+      loadHand();listenForPlays();listenForWinner();updateScores();
+    }
+
+    async function loadHand(){
+      const playerRef=ref(db,`lobbies/${lobbyCode}/players/${playerName}/hand`);
+      const snap=await get(playerRef);
+      playerHand=snap.exists()?snap.val():drawHand();
+      renderHand();
     }
 
     function renderHand(){
       const handDiv=document.getElementById("hand");handDiv.innerHTML="";
-      if(judge===playerName){handDiv.innerHTML="<p>You are the judge this round.</p>";return;}
-      const hand=[];for(let i=0;i<7;i++)hand.push(whiteCards[Math.floor(Math.random()*whiteCards.length)]);
-      hand.forEach(card=>{const div=document.createElement("div");div.className="card";div.innerText=card;div.onclick=()=>playCard(card);handDiv.appendChild(div);});
+      if(judge===playerName){handDiv.innerHTML="<p>You are the judge this round. Waiting for others...</p>";return;}
+      playerHand.forEach((card,idx)=>{const div=document.createElement("div");div.className="card";div.innerText=card;div.onclick=()=>playCard(card,idx);handDiv.appendChild(div);});
     }
 
-    async function playCard(card){
+    async function playCard(card,index){
+      playerHand.splice(index,1);
+      await update(ref(db,`lobbies/${lobbyCode}/players/${playerName}`),{hand:playerHand});
       await update(ref(db,`lobbies/${lobbyCode}/plays/${playerName}`),{card});
       document.getElementById("hand").innerHTML="<p>Waiting for others...</p>";
     }
 
     function listenForPlays(){
-      onValue(ref(db,`lobbies/${lobbyCode}/plays`),snap=>{
+      onValue(ref(db,`lobbies/${lobbyCode}/plays`),async snap=>{
         if(!snap.exists())return;
         const plays=snap.val();
-        const tableDiv=document.getElementById("table");tableDiv.innerHTML="";
-        Object.entries(plays).forEach(([p,{card}])=>{
-          const div=document.createElement("div");div.className="card";div.innerText=card;
-          if(judge===playerName)div.onclick=()=>pickWinner(p);
-          tableDiv.appendChild(div);
-        });
+        const playerSnap=await get(ref(db,`lobbies/${lobbyCode}/players`));
+        if(!playerSnap.exists())return;
+        const totalPlayers=Object.keys(playerSnap.val()).length;
+        if(Object.keys(plays).length===totalPlayers-1){renderPlays(plays);} // show once all non-judge players submit
       });
     }
 
-    async function pickWinner(winner){
-      const playerRef=ref(db,`lobbies/${lobbyCode}/players/${winner}/score`);
+    function renderPlays(plays){
+      const tableDiv=document.getElementById("table");tableDiv.innerHTML="";
+      Object.entries(plays).forEach(([p,{card}])=>{
+        const div=document.createElement("div");div.className="card";div.innerText=card;
+        if(judge===playerName)div.onclick=()=>pickWinner(p,card);
+        tableDiv.appendChild(div);
+      });
+    }
+
+    async function pickWinner(winner,card){
+      document.querySelectorAll('#table .card').forEach(c=>c.onclick=null);
+      const playerRef=ref(db,`lobbies/${lobbyCode}/players/${winner}`);
       const snap=await get(playerRef);
-      const currentScore=snap.exists()?snap.val():0;
-      await update(ref(db,`lobbies/${lobbyCode}/players/${winner}`),{score:currentScore+1});
-      setTimeout(startRound,1500);
+      const data=snap.exists()?snap.val():{score:0,hand:[]};
+      const newHand=[...data.hand,drawCard()];
+      await update(playerRef,{score:data.score+1,hand:newHand});
+      await update(ref(db,`lobbies/${lobbyCode}`),{winner:{name:winner,card}});
+      setTimeout(startRound,4000);
+    }
+
+    function listenForWinner(){
+      onValue(ref(db,`lobbies/${lobbyCode}/winner`),snap=>{
+        if(!snap.exists())return;
+        const data=snap.val();
+        if(data){document.getElementById("winnerDisplay").innerHTML=`<h3>${data.name} won this round!</h3><p><strong>${document.getElementById("blackCard").innerText}</strong><br>→ ${data.card}</p>`;}
+      });
     }
 
     function updateScores(){
       onValue(ref(db,`lobbies/${lobbyCode}/players`),snap=>{
         if(!snap.exists())return;
-        const players=snap.val();
-        document.getElementById("scores").innerHTML="<h3>Scores</h3>"+Object.entries(players).map(([p,data])=>`${p}: ${data.score}`).join(" | ");
+        document.getElementById("scores").innerHTML="<h3>Scores</h3>"+Object.entries(snap.val()).map(([p,d])=>`${p}: ${d.score}`).join(" | ");
       });
     }
   </script>
