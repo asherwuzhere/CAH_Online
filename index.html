@@ -47,10 +47,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",
       authDomain: "cards-against-me-652e1.firebaseapp.com",
+      databaseURL: "https://cards-against-me-652e1-default-rtdb.firebaseio.com",
       projectId: "cards-against-me-652e1",
       storageBucket: "cards-against-me-652e1.firebasestorage.app",
       messagingSenderId: "765408741155",
@@ -99,6 +99,22 @@
         startBtn.classList.remove("hidden");
         startBtn.onclick = startGame;
       }
+      listenForPhaseChange();
+    }
+
+    function listenForPhaseChange() {
+      const phaseRef = ref(db, `lobbies/${lobbyCode}/phase`);
+      onValue(phaseRef, snapshot => {
+        if (!snapshot.exists()) return;
+        const phase = snapshot.val();
+        if (phase === "lobby") {
+          document.getElementById("lobby").classList.remove("hidden");
+          document.getElementById("game").classList.add("hidden");
+        }
+        if (phase === "game") {
+          loadGame();
+        }
+      });
     }
 
     async function startGame() { await startRound(); }
@@ -110,7 +126,6 @@
       if (!judge) judge = players[Math.floor(Math.random() * players.length)]; else judge = players[(players.indexOf(judge) + 1) % players.length];
       const blackCard = blackCards[Math.floor(Math.random() * blackCards.length)];
       await update(ref(db, `lobbies/${lobbyCode}`), { phase: "game", blackCard, judge, plays: {} });
-      loadGame();
     }
 
     function loadGame() {
