@@ -5,18 +5,7 @@
   <title>Cards Against Humanity Online</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      text-align: center;
-      margin: 0;
-      background: linear-gradient(135deg, #222 0%, #444 100%);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
+    body {font-family: 'Poppins', sans-serif;text-align: center;margin: 0;background: linear-gradient(135deg, #222 0%, #444 100%);color: white;display: flex;flex-direction: column;align-items: center;justify-content: center;min-height: 100vh;}
     h1 { font-size: 2.5em; margin: 0.3em; }
     input, button { margin: 0.5em; padding: 0.8em 1.2em; font-size: 1em; border: none; border-radius: 10px; }
     input { width: 80%; max-width: 300px; }
@@ -55,10 +44,18 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js';
-    import { getDatabase, ref, set, update, get, onValue } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+    import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = { apiKey: "YOUR_FIREBASE_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com", databaseURL: "https://YOUR_PROJECT.firebaseio.com", projectId: "YOUR_PROJECT", storageBucket: "YOUR_PROJECT.appspot.com", messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID" };
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",
+      authDomain: "cards-against-me-652e1.firebaseapp.com",
+      projectId: "cards-against-me-652e1",
+      storageBucket: "cards-against-me-652e1.firebasestorage.app",
+      messagingSenderId: "765408741155",
+      appId: "1:765408741155:web:9e31e2bc6b4b79429b6e96"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
