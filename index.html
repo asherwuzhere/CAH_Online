@@ -75,6 +75,17 @@
     function drawHand(){return Array.from({length:7},()=>whiteCards[Math.floor(Math.random()*whiteCards.length)]);}
     function drawCard(){return whiteCards[Math.floor(Math.random()*whiteCards.length)];}
 
+    async function refillHands(){
+      const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));
+      if(!snap.exists())return;
+      const players=snap.val();
+      for(const p in players){
+        let hand=players[p].hand||[];
+        while(hand.length<7)hand.push(drawCard());
+        await update(ref(db,`lobbies/${lobbyCode}/players/${p}`),{hand});
+      }
+    }
+
     function enterLobby(){
       document.getElementById("home").classList.add("hidden");
       document.getElementById("lobby").classList.remove("hidden");
@@ -96,6 +107,7 @@
     async function startGame(){const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));if(!snap.exists()||Object.keys(snap.val()).length<3)return alert("Need at least 3 players.");await startRound();}
 
     async function startRound(){
+      await refillHands();
       document.getElementById("winnerDisplay").innerHTML="";
       const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));if(!snap.exists())return;
       const players=Object.keys(snap.val());
@@ -128,6 +140,7 @@
     }
 
     async function playCard(card,index){
+      if(judge===playerName)return;
       playerHand.splice(index,1);
       await update(ref(db,`lobbies/${lobbyCode}/players/${playerName}`),{hand:playerHand});
       await update(ref(db,`lobbies/${lobbyCode}/plays/${playerName}`),{card});
@@ -141,7 +154,7 @@
         const playerSnap=await get(ref(db,`lobbies/${lobbyCode}/players`));
         if(!playerSnap.exists())return;
         const totalPlayers=Object.keys(playerSnap.val()).length;
-        if(Object.keys(plays).length===totalPlayers-1){renderPlays(plays);} // show once all non-judge players submit
+        if(Object.keys(plays).length===totalPlayers-1){renderPlays(plays);} 
       });
     }
 
@@ -152,6 +165,7 @@
         if(judge===playerName)div.onclick=()=>pickWinner(p,card);
         tableDiv.appendChild(div);
       });
+      if(judge===playerName)document.getElementById("judgeNotice").innerText="Select the winning card.";
     }
 
     async function pickWinner(winner,card){
@@ -162,7 +176,7 @@
       const newHand=[...data.hand,drawCard()];
       await update(playerRef,{score:data.score+1,hand:newHand});
       await update(ref(db,`lobbies/${lobbyCode}`),{winner:{name:winner,card}});
-      setTimeout(startRound,4000);
+      setTimeout(startRound,10000);
     }
 
     function listenForWinner(){
