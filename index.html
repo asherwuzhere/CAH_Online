@@ -3,34 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <title>Cards Against Humanity Online</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body {font-family: 'Poppins', sans-serif;text-align: center;margin: 0;background: linear-gradient(135deg, #222 0%, #444 100%);color: white;display: flex;flex-direction: column;align-items: center;justify-content: center;min-height: 100vh;}
-    h1 { font-size: 2.5em; margin: 0.3em; }
-    input, button { margin: 0.5em; padding: 0.8em 1.2em; font-size: 1em; border: none; border-radius: 10px; }
-    input { width: 80%; max-width: 300px; }
-    button { background-color: #ff4444; color: white; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #ff6666; }
-    #hand, #table { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 1em; }
-    .card { background: white; color: black; padding: 1em; border-radius: 8px; margin: 0.5em; cursor: pointer; width: 150px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
-    .card:hover { transform: translateY(-3px); }
-    .black-card { background: black; color: white; font-weight: bold; }
-    #judgeNotice { font-size: 1.1em; margin-top: 1em; color: #ffd700; }
-    #scores { margin-top: 1em; }
+    body {font-family: 'Poppins', sans-serif;margin:0;background:#222;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;}
+    h1,h2,h3{margin:0.3em;text-align:center;}
+    input,button{margin:0.5em;padding:0.8em;font-size:1em;border:none;border-radius:10px;width:80%;max-width:300px;}
+    button{background:#ff4444;color:white;font-weight:bold;cursor:pointer;}
+    #hand,#table{display:flex;flex-wrap:wrap;justify-content:center;margin-top:1em;}
+    .card{background:white;color:black;padding:0.8em;border-radius:8px;margin:0.3em;cursor:pointer;width:45%;max-width:140px;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:0.9em;}
+    .black-card{background:black;color:white;font-weight:bold;width:90%;max-width:300px;margin:0 auto;}
+    #judgeNotice{font-size:1em;margin-top:0.5em;color:#ffd700;}
+    #scores{margin-top:0.5em;font-size:0.9em;}
+    .hidden{display:none;}
   </style>
 </head>
 <body>
   <div id="home">
     <h1>Cards Against Humanity</h1>
-    <input id="nameInput" placeholder="Your Name"><br>
-    <button id="createBtn">Create Lobby</button><br>
+    <input id="nameInput" placeholder="Your Name">
+    <button id="createBtn">Create Lobby</button>
     <input id="joinCodeInput" placeholder="Enter Lobby Code">
     <button id="joinBtn">Join Lobby</button>
   </div>
 
   <div id="lobby" class="hidden">
     <h2>Lobby Code: <span id="lobbyCode"></span></h2>
-    <h3>Players:</h3>
     <ul id="playerList"></ul>
     <button id="startGameBtn" class="hidden">Start Game</button>
   </div>
@@ -47,139 +45,112 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getDatabase, ref, set, update, get, onValue } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",
-      authDomain: "cards-against-me-652e1.firebaseapp.com",
-      databaseURL: "https://cards-against-me-652e1-default-rtdb.firebaseio.com",
-      projectId: "cards-against-me-652e1",
-      storageBucket: "cards-against-me-652e1.firebasestorage.app",
-      messagingSenderId: "765408741155",
-      appId: "1:765408741155:web:9e31e2bc6b4b79429b6e96"
-    };
-
+    const firebaseConfig = { apiKey:"AIzaSyCh9xZad4-cyTh_0unCLJi1R-y_sLIwJX0",authDomain:"cards-against-me-652e1.firebaseapp.com",databaseURL:"https://cards-against-me-652e1-default-rtdb.firebaseio.com",projectId:"cards-against-me-652e1",storageBucket:"cards-against-me-652e1.firebasestorage.app",messagingSenderId:"765408741155",appId:"1:765408741155:web:9e31e2bc6b4b79429b6e96"};
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const blackCards = ["Why can't I sleep at night?", "What's that smell?", "I got 99 problems but ___ ain't one."];
-    const whiteCards = ["A windmill full of corpses.", "An endless stream of diarrhea.", "Michelle Obama's arms.", "German dungeon porn.", "White privilege."];
+    const blackCards = ["Why can't I sleep at night?","What's that smell?","I got 99 problems but ___ ain't one."];
+    const whiteCards = ["A windmill full of corpses.","An endless stream of diarrhea.","Michelle Obama's arms.","German dungeon porn.","White privilege."];
 
-    let playerName = "";
-    let lobbyCode = "";
-    let isHost = false;
-    let judge = "";
+    let playerName="",lobbyCode="",isHost=false,judge="";
 
-    document.getElementById("createBtn").onclick = async () => {
-      playerName = document.getElementById("nameInput").value.trim();
-      if (!playerName) return alert("Enter a name.");
-      lobbyCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-      isHost = true;
-      await set(ref(db, `lobbies/${lobbyCode}`), { players: { [playerName]: { score: 0 } }, host: playerName, phase: "lobby" });
+    document.getElementById("createBtn").onclick=async()=>{
+      playerName=document.getElementById("nameInput").value.trim();
+      if(!playerName)return alert("Enter a name.");
+      lobbyCode=Math.random().toString(36).substring(2,7).toUpperCase();
+      isHost=true;
+      await set(ref(db,`lobbies/${lobbyCode}`),{players:{[playerName]:{score:0}},host:playerName,phase:"lobby"});
       enterLobby();
     };
 
-    document.getElementById("joinBtn").onclick = async () => {
-      playerName = document.getElementById("nameInput").value.trim();
-      lobbyCode = document.getElementById("joinCodeInput").value.trim().toUpperCase();
-      if (!playerName || !lobbyCode) return alert("Enter name and code.");
-      await update(ref(db, `lobbies/${lobbyCode}/players`), { [playerName]: { score: 0 } });
+    document.getElementById("joinBtn").onclick=async()=>{
+      playerName=document.getElementById("nameInput").value.trim();
+      lobbyCode=document.getElementById("joinCodeInput").value.trim().toUpperCase();
+      if(!playerName||!lobbyCode)return alert("Enter name and code.");
+      await update(ref(db,`lobbies/${lobbyCode}/players`),{[playerName]:{score:0}});
       enterLobby();
     };
 
-    function enterLobby() {
+    function enterLobby(){
       document.getElementById("home").classList.add("hidden");
       document.getElementById("lobby").classList.remove("hidden");
-      document.getElementById("lobbyCode").innerText = lobbyCode;
-      const playerList = document.getElementById("playerList");
-      onValue(ref(db, `lobbies/${lobbyCode}/players`), snap => {
-        playerList.innerHTML = "";
-        if (snap.exists()) Object.keys(snap.val()).forEach(p => { const li = document.createElement("li"); li.innerText = p; playerList.appendChild(li); });
+      document.getElementById("lobbyCode").innerText=lobbyCode;
+      const playerList=document.getElementById("playerList");
+      onValue(ref(db,`lobbies/${lobbyCode}/players`),snap=>{
+        playerList.innerHTML="";
+        if(snap.exists())Object.keys(snap.val()).forEach(p=>{const li=document.createElement("li");li.innerText=p;playerList.appendChild(li);});
       });
-      if (isHost) {
-        const startBtn = document.getElementById("startGameBtn");
-        startBtn.classList.remove("hidden");
-        startBtn.onclick = startGame;
-      }
+      if(isHost){const startBtn=document.getElementById("startGameBtn");startBtn.classList.remove("hidden");startBtn.onclick=startGame;}
       listenForPhaseChange();
     }
 
-    function listenForPhaseChange() {
-      const phaseRef = ref(db, `lobbies/${lobbyCode}/phase`);
-      onValue(phaseRef, snapshot => {
-        if (!snapshot.exists()) return;
-        const phase = snapshot.val();
-        if (phase === "lobby") {
-          document.getElementById("lobby").classList.remove("hidden");
-          document.getElementById("game").classList.add("hidden");
-        }
-        if (phase === "game") {
-          loadGame();
-        }
+    function listenForPhaseChange(){
+      onValue(ref(db,`lobbies/${lobbyCode}/phase`),snapshot=>{
+        if(!snapshot.exists())return;
+        const phase=snapshot.val();
+        if(phase==="game")loadGame();
       });
     }
 
-    async function startGame() { await startRound(); }
+    async function startGame(){await startRound();}
 
-    async function startRound() {
-      const snap = await get(ref(db, `lobbies/${lobbyCode}/players`));
-      if (!snap.exists()) return;
-      const players = Object.keys(snap.val());
-      if (!judge) judge = players[Math.floor(Math.random() * players.length)]; else judge = players[(players.indexOf(judge) + 1) % players.length];
-      const blackCard = blackCards[Math.floor(Math.random() * blackCards.length)];
-      await update(ref(db, `lobbies/${lobbyCode}`), { phase: "game", blackCard, judge, plays: {} });
+    async function startRound(){
+      const snap=await get(ref(db,`lobbies/${lobbyCode}/players`));
+      if(!snap.exists())return;
+      const players=Object.keys(snap.val());
+      judge=judge?players[(players.indexOf(judge)+1)%players.length]:players[Math.floor(Math.random()*players.length)];
+      const blackCard=blackCards[Math.floor(Math.random()*blackCards.length)];
+      await update(ref(db,`lobbies/${lobbyCode}`),{phase:"game",blackCard,judge,plays:{}});
     }
 
-    function loadGame() {
+    function loadGame(){
       document.getElementById("lobby").classList.add("hidden");
       document.getElementById("game").classList.remove("hidden");
-      onValue(ref(db, `lobbies/${lobbyCode}/blackCard`), snap => { if (snap.exists()) document.getElementById("blackCard").innerText = snap.val(); });
-      onValue(ref(db, `lobbies/${lobbyCode}/judge`), snap => { if (snap.exists()) { judge = snap.val(); document.getElementById("judgeNotice").innerText = judge === playerName ? "You are the judge. Pick the winner." : `${judge} is the judge.`; } });
-      renderHand(); listenForPlays(); updateScores();
-    }
-
-    function renderHand() {
-      const handDiv = document.getElementById("hand");
-      handDiv.innerHTML = "";
-      if (judge === playerName) { handDiv.innerHTML = "<p>You are the judge this round.</p>"; return; }
-      const hand = [];
-      for (let i = 0; i < 7; i++) hand.push(whiteCards[Math.floor(Math.random() * whiteCards.length)]);
-      hand.forEach(card => {
-        const div = document.createElement("div"); div.className = "card"; div.innerText = card; div.onclick = () => playCard(card); handDiv.appendChild(div);
+      onValue(ref(db,`lobbies/${lobbyCode}/blackCard`),snap=>{if(snap.exists())document.getElementById("blackCard").innerText=snap.val();});
+      onValue(ref(db,`lobbies/${lobbyCode}/judge`),snap=>{
+        if(snap.exists()){judge=snap.val();document.getElementById("judgeNotice").innerText=judge===playerName?"You are the judge. Pick the winner.":`${judge} is the judge.`;}
       });
+      renderHand();listenForPlays();updateScores();
     }
 
-    async function playCard(card) {
-      await update(ref(db, `lobbies/${lobbyCode}/plays/${playerName}`), { card });
-      document.getElementById("hand").innerHTML = "<p>Waiting for others...</p>";
+    function renderHand(){
+      const handDiv=document.getElementById("hand");handDiv.innerHTML="";
+      if(judge===playerName){handDiv.innerHTML="<p>You are the judge this round.</p>";return;}
+      const hand=[];for(let i=0;i<7;i++)hand.push(whiteCards[Math.floor(Math.random()*whiteCards.length)]);
+      hand.forEach(card=>{const div=document.createElement("div");div.className="card";div.innerText=card;div.onclick=()=>playCard(card);handDiv.appendChild(div);});
     }
 
-    function listenForPlays() {
-      onValue(ref(db, `lobbies/${lobbyCode}/plays`), snap => {
-        if (!snap.exists()) return;
-        const plays = snap.val();
-        const tableDiv = document.getElementById("table");
-        tableDiv.innerHTML = "";
-        Object.entries(plays).forEach(([p, { card }]) => {
-          const div = document.createElement("div"); div.className = "card"; div.innerText = card;
-          if (judge === playerName) div.onclick = () => pickWinner(p);
+    async function playCard(card){
+      await update(ref(db,`lobbies/${lobbyCode}/plays/${playerName}`),{card});
+      document.getElementById("hand").innerHTML="<p>Waiting for others...</p>";
+    }
+
+    function listenForPlays(){
+      onValue(ref(db,`lobbies/${lobbyCode}/plays`),snap=>{
+        if(!snap.exists())return;
+        const plays=snap.val();
+        const tableDiv=document.getElementById("table");tableDiv.innerHTML="";
+        Object.entries(plays).forEach(([p,{card}])=>{
+          const div=document.createElement("div");div.className="card";div.innerText=card;
+          if(judge===playerName)div.onclick=()=>pickWinner(p);
           tableDiv.appendChild(div);
         });
       });
     }
 
-    async function pickWinner(winner) {
-      const playerRef = ref(db, `lobbies/${lobbyCode}/players/${winner}/score`);
-      const snap = await get(playerRef);
-      const currentScore = snap.exists() ? snap.val() : 0;
-      await update(ref(db, `lobbies/${lobbyCode}/players/${winner}`), { score: currentScore + 1 });
-      setTimeout(startRound, 1500);
+    async function pickWinner(winner){
+      const playerRef=ref(db,`lobbies/${lobbyCode}/players/${winner}/score`);
+      const snap=await get(playerRef);
+      const currentScore=snap.exists()?snap.val():0;
+      await update(ref(db,`lobbies/${lobbyCode}/players/${winner}`),{score:currentScore+1});
+      setTimeout(startRound,1500);
     }
 
-    function updateScores() {
-      onValue(ref(db, `lobbies/${lobbyCode}/players`), snap => {
-        if (!snap.exists()) return;
-        const players = snap.val();
-        const scoresDiv = document.getElementById("scores");
-        scoresDiv.innerHTML = "<h3>Scores</h3>" + Object.entries(players).map(([p, data]) => `${p}: ${data.score}`).join(" | ");
+    function updateScores(){
+      onValue(ref(db,`lobbies/${lobbyCode}/players`),snap=>{
+        if(!snap.exists())return;
+        const players=snap.val();
+        document.getElementById("scores").innerHTML="<h3>Scores</h3>"+Object.entries(players).map(([p,data])=>`${p}: ${data.score}`).join(" | ");
       });
     }
   </script>
